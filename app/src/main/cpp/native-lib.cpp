@@ -27,8 +27,8 @@ Java_com_linhao_video_MainActivity_stringFromJNI(
 uint8_t *buffer;
 AVFrame *frame;
 AVFrame *pFrameRGBA;
-AVCodecContext *avCodecContext;
-AVFormatContext *avFormatContext;
+AVCodecContext *pCodecCtx;
+AVFormatContext *pFormatCtx;
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -40,10 +40,10 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
     av_register_all();
 
     //获取编码上下文对象
-    avFormatContext = avformat_alloc_context();
+    pFormatCtx = avformat_alloc_context();
 
     //打开视频文件
-    if (avformat_open_input(&avFormatContext, filePath, NULL, NULL) != 0) {
+    if (avformat_open_input(&pFormatCtx, filePath, NULL, NULL) != 0) {
 
         LOGD("Couldn't open file:%s\n", filePath);
         env->ReleaseStringUTFChars(path_, filePath);
@@ -52,7 +52,7 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
     }
 
     //查找视频流得信息
-    if (avformat_find_stream_info(avFormatContext, NULL) < 0) {
+    if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
         LOGD("Couldn't find stream information.");
         env->ReleaseStringUTFChars(path_, filePath);
         free_malloc();
@@ -62,8 +62,8 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
     int videoStreamIndex = -1, i;
 
     //查找视频流得位置
-    for (i = 0; i < avFormatContext->nb_streams; ++i) {
-        if (avFormatContext->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO &&
+    for (i = 0; i < pFormatCtx->nb_streams; ++i) {
+        if (pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO &&
             videoStreamIndex < 0) {
             videoStreamIndex = i;
             break;
@@ -77,18 +77,18 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
         return; // Didn't find a video stream
     }
 
-    avCodecContext = avFormatContext->streams[videoStreamIndex]->codec;
+    pCodecCtx = pFormatCtx->streams[videoStreamIndex]->codec;
 
     //找到解压器
-    AVCodec *avCodec = avcodec_find_decoder(avCodecContext->codec_id);
-    if (avCodec == NULL) {
+    AVCodec *pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
+    if (pCodec == NULL) {
         LOGD("Codec not found.");
         env->ReleaseStringUTFChars(path_, filePath);
         free_malloc();
         return; // Codec not found
     }
 
-    if (avcodec_open2(avCodecContext, avCodec, NULL) < 0) {
+    if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0) {
         LOGD("Could not open codec.");
         env->ReleaseStringUTFChars(path_, filePath);
         free_malloc();
@@ -97,8 +97,8 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
 
     // 获取native window
     ANativeWindow *aNativeWindow = ANativeWindow_fromSurface(env, surface);
-    int videoWidth = avCodecContext->width;
-    int videoHeight = avCodecContext->height;
+    int videoWidth = pCodecCtx->width;
+    int videoHeight = pCodecCtx->height;
 
     // 设置native window的buffer大小,可自动拉伸
     ANativeWindow_setBuffersGeometry(aNativeWindow, videoWidth, videoHeight,
@@ -119,27 +119,33 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
     }
 
     //计算出需要为buffer申请内存空间
-    int numBytes = av_image_get_buffer_size(AV_PIX_FMT_0RGB, videoWidth, videoHeight, 1);
+    int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGBA, videoWidth, videoHeight, 1);
 
-    buffer = (uint8_t *) malloc(numBytes * sizeof(uint8_t));
+    buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
 
     // buffer中数据就是用于渲染的,且格式为RGBA
     av_image_fill_arrays(pFrameRGBA->data, pFrameRGBA->linesize, buffer, AV_PIX_FMT_RGBA,
                          videoWidth, videoHeight, 1);
 
     // 由于解码出来的帧格式不是RGBA的,在渲染之前需要进行格式转换
-    struct SwsContext *sws_ctx = sws_getContext(videoWidth, videoHeight, avCodecContext->pix_fmt,
+    struct SwsContext *sws_ctx = sws_getContext(videoWidth, videoHeight, pCodecCtx->pix_fmt,
                                                 videoWidth, videoHeight, AV_PIX_FMT_RGBA,
                                                 SWS_BILINEAR, NULL, NULL, NULL);
 
+    if (sws_ctx==NULL){
+        LOGD("Could not get SwsContext");
+        env->ReleaseStringUTFChars(path_, filePath);
+        free_malloc();
+        return;
+    }
     int frameFinish;
     AVPacket packet;
 
-    while (av_read_frame(avFormatContext, &packet) >= 0) {
+    while (av_read_frame(pFormatCtx, &packet) >= 0) {
 
         if (packet.stream_index == videoStreamIndex) {
             //开始解压视频流
-            avcodec_decode_video2(avCodecContext, frame, &frameFinish, &packet);
+            avcodec_decode_video2(pCodecCtx, frame, &frameFinish, &packet);
             //并不是一次就可以解码出一帧得
             if (frameFinish) {
                 ANativeWindow_lock(aNativeWindow, &window_buffer, 0);
@@ -193,12 +199,12 @@ void free_malloc() {
         av_free(pFrameRGBA);
     }
 
-    if (avCodecContext != NULL) {
-        avcodec_close(avCodecContext);
+    if (pCodecCtx != NULL) {
+        avcodec_close(pCodecCtx);
     }
 
-    if (avFormatContext != NULL) {
-        avformat_close_input(&avFormatContext);
+    if (pFormatCtx != NULL) {
+        avformat_close_input(&pFormatCtx);
     }
 }
 
