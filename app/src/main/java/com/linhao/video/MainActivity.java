@@ -59,7 +59,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                     Log.d(TAG,"file exit");
                 }
                 try {
-                    setSurface(surfaceHolder.getSurface(), "/storage/extsd/video/A/20180101221156A.mp4");
+                    setSurface(surfaceHolder.getSurface(), "/storage/extsd/video/A/20180101221156A11111.mp4");
                 }catch (Exception e){
                     e.printStackTrace();
                 }
@@ -85,7 +85,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
 
     @Override
     public void error(String error) {
-
+       Log.d(TAG,"22212121221");
     }
 
     @Override

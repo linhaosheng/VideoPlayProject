@@ -15,6 +15,9 @@ extern "C" {
 #define  LOG_TAG    "videoplayer"
 #define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 
+void error(JNIEnv *env,char errrorMsg[50]);
+void success(JNIEnv *env,char errrorMsg[50]);
+void finish(JNIEnv *env,char errrorMsg[50]);
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_linhao_video_MainActivity_stringFromJNI(
@@ -45,6 +48,7 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
     //打开视频文件
     if (avformat_open_input(&pFormatCtx, filePath, NULL, NULL) != 0) {
 
+        error(env,"Couldn't open file");
         LOGD("Couldn't open file:%s\n", filePath);
         env->ReleaseStringUTFChars(path_, filePath);
         free_malloc();
@@ -227,4 +231,16 @@ void JNU_ThrowByName(JNIEnv *env, const char *name, const char *msg){
     }
     /* 释放局部引用 */
     env->DeleteLocalRef(cls);
+}
+
+//回調層得錯誤接口
+void error(JNIEnv * env, char errrorMsg[50]){
+    const char* method_class_from_java = "com/linhao/video/MainActivity";
+    const char * method_name_from_java = "error";
+    jclass cls_str_id = env->FindClass(method_class_from_java);
+    jmethodID m_Java_errFunc = env->GetMethodID(cls_str_id, method_name_from_java, "(Ljava/lang/String;)V");
+    if(errrorMsg != NULL){
+        jstring msg = env->NewStringUTF(errrorMsg);
+        env->CallVoidMethod(cls_str_id, m_Java_errFunc,msg);
+    }
 }
