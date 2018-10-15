@@ -44,6 +44,17 @@ add_library( # Sets the name of the library.
              # Provides a relative path to your source file(s).
              src/main/cpp/native-lib.cpp )
 
+add_library( # Sets the name of the library.
+        util-lib
+        SHARED
+        src/main/cpp/callJavaUtil.cpp )
+
+add_library( # Sets the name of the library.
+        videoInfo_lib
+        SHARED
+        src/main/cpp/videoInfo.cpp )
+
+
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because CMake includes system libraries in the search path by
 # default, you only need to specify the name of the public NDK library
@@ -63,6 +74,8 @@ find_library( # Sets the name of the path variable.
 
 target_link_libraries( # Specifies the target library.
                        native-lib
+                       util-lib
+                       videoInfo_lib
                        android
                        # Links the target library to the log library
                        # included in the NDK.

@@ -4,6 +4,8 @@
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
 #include "local/native-lib.h"
+#include "local/videoInfo.h"
+#include "local/callJavaUtil.h"
 
 extern "C" {
 #include "libavcodec/avcodec.h"
@@ -18,6 +20,7 @@ extern "C" {
 void error(JNIEnv *env,char errrorMsg[50]);
 void success(JNIEnv *env,char errrorMsg[50]);
 void finish(JNIEnv *env,char errrorMsg[50]);
+void callBack(JNIEnv * env, const char *msg, const char * methorName);
 
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_linhao_video_MainActivity_stringFromJNI(
@@ -47,8 +50,9 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
 
     //打开视频文件
     if (avformat_open_input(&pFormatCtx, filePath, NULL, NULL) != 0) {
-
-        error(env,"Couldn't open file");
+        const char * msg = "Couldn't open file";
+        const char * name = "error";
+        callBack(env,msg,name);
         LOGD("Couldn't open file:%s\n", filePath);
         env->ReleaseStringUTFChars(path_, filePath);
         free_malloc();
@@ -57,11 +61,17 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
 
     //查找视频流得信息
     if (avformat_find_stream_info(pFormatCtx, NULL) < 0) {
+        const char * msg = "Couldn't find stream information.";
+        const char * name = "error";
+        callBack(env,msg,name);
         LOGD("Couldn't find stream information.");
         env->ReleaseStringUTFChars(path_, filePath);
         free_malloc();
         return;
     }
+    //获取视频长度
+    long duration = getVideoDuration(pFormatCtx);
+    setVideoDuration(env,duration);
 
     int videoStreamIndex = -1, i;
 
@@ -75,6 +85,9 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
     }
 
     if (videoStreamIndex == -1) {
+        const char * msg = "Didn't find a video stream.";
+        const char * name = "error";
+        callBack(env,msg,name);
         LOGD("Didn't find a video stream.");
         env->ReleaseStringUTFChars(path_, filePath);
         free_malloc();
@@ -86,6 +99,9 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
     //找到解压器
     AVCodec *pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
     if (pCodec == NULL) {
+        const char * msg = "Codec not found.";
+        const char * name = "error";
+        callBack(env,msg,name);
         LOGD("Codec not found.");
         env->ReleaseStringUTFChars(path_, filePath);
         free_malloc();
@@ -93,12 +109,16 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
     }
 
     if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0) {
+        const char * msg = "Could not open codec.";
+        const char * name = "error";
+        callBack(env,msg,name);
         LOGD("Could not open codec.");
         env->ReleaseStringUTFChars(path_, filePath);
         free_malloc();
         return; // Could not open codec
     }
 
+    LOGD("111111111");
     // 获取native window
     ANativeWindow *aNativeWindow = ANativeWindow_fromSurface(env, surface);
     int videoWidth = pCodecCtx->width;
@@ -116,12 +136,15 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
     pFrameRGBA = av_frame_alloc();
 
     if (frame == NULL || pFrameRGBA == NULL) {
+        const char * msg = "Could not allocate video frame.";
+        const char * name = "error";
+        callBack(env,msg,name);
         LOGD("Could not allocate video frame.");
         env->ReleaseStringUTFChars(path_, filePath);
         free_malloc();
         return;
     }
-
+    LOGD("2222222");
     //计算出需要为buffer申请内存空间
     int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGBA, videoWidth, videoHeight, 1);
 
@@ -135,8 +158,11 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
     struct SwsContext *sws_ctx = sws_getContext(videoWidth, videoHeight, pCodecCtx->pix_fmt,
                                                 videoWidth, videoHeight, AV_PIX_FMT_RGBA,
                                                 SWS_BILINEAR, NULL, NULL, NULL);
-
+    LOGD("333333333333");
     if (sws_ctx==NULL){
+        const char * msg = "Could not get SwsContext";
+        const char * name = "error";
+        callBack(env,msg,name);
         LOGD("Could not get SwsContext");
         env->ReleaseStringUTFChars(path_, filePath);
         free_malloc();
@@ -144,7 +170,12 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
     }
     int frameFinish;
     AVPacket packet;
+    LOGD("5555555555");
+    const char * msg = "success";
+    const char * name = "success";
+    callBack(env,msg,name);
 
+    LOGD("44444444444");
     while (av_read_frame(pFormatCtx, &packet) >= 0) {
 
         if (packet.stream_index == videoStreamIndex) {
@@ -154,18 +185,15 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
             if (frameFinish) {
                 ANativeWindow_lock(aNativeWindow, &window_buffer, 0);
 
-                LOGD("11111111");
-
-                if (checkExc(env)){
-                    JNU_ThrowByName(env,"java/lang/Exception", "exception from jni: jni exception happened at p1111");
-                }
+//                if (checkExc(env)){
+//                    JNU_ThrowByName(env,"java/lang/Exception", "exception from jni: jni exception happened at p1111");
+//                }
                 // 格式转换
                 sws_scale(sws_ctx, (const uint8_t *const *) frame->data, frame->linesize, 0,
                           videoHeight, pFrameRGBA->data, pFrameRGBA->linesize);
-                if (checkExc(env)){
-                    JNU_ThrowByName(env,"java/lang/Exception", "exception from jni: jni exception happened at p2222");
-                }
-                LOGD("22222222");
+//                if (checkExc(env)){
+//                    JNU_ThrowByName(env,"java/lang/Exception", "exception from jni: jni exception happened at p2222");
+//                }
                 // 获取stride
                 uint8_t *dst = (uint8_t *) window_buffer.bits;
                 int dstStride = window_buffer.stride * 4;
@@ -176,7 +204,6 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
                 for (h = 0; h < videoHeight; h++) {
                     memcpy(dst + h * dstStride, src + h * srcStride, srcStride);
                 }
-                LOGD("333333");
                 ANativeWindow_unlockAndPost(aNativeWindow);
             }
         }
@@ -186,7 +213,6 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
     free_malloc();
     env->ReleaseStringUTFChars(path_, filePath);
     return;
-
 }
 
 //釋放內存
@@ -233,14 +259,17 @@ void JNU_ThrowByName(JNIEnv *env, const char *name, const char *msg){
     env->DeleteLocalRef(cls);
 }
 
-//回調層得錯誤接口
-void error(JNIEnv * env, char errrorMsg[50]){
+
+void callBack(JNIEnv * env, const char * msg , const char * methorName){
     const char* method_class_from_java = "com/linhao/video/MainActivity";
-    const char * method_name_from_java = "error";
+   // const char * method_name_from_java = "error";
     jclass cls_str_id = env->FindClass(method_class_from_java);
-    jmethodID m_Java_errFunc = env->GetMethodID(cls_str_id, method_name_from_java, "(Ljava/lang/String;)V");
-    if(errrorMsg != NULL){
-        jstring msg = env->NewStringUTF(errrorMsg);
-        env->CallVoidMethod(cls_str_id, m_Java_errFunc,msg);
+     if (cls_str_id==NULL){
+         return;
+     }
+    jmethodID m_Java_Fun = env->GetMethodID(cls_str_id, methorName, "(Ljava/lang/String;)V");
+    if(msg != NULL && m_Java_Fun !=NULL){
+        jstring msgData = env->NewStringUTF(msg);
+        env->CallStaticVoidMethod(cls_str_id, m_Java_Fun,msgData);
     }
 }

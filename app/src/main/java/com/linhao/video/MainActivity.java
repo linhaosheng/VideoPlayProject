@@ -19,6 +19,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     private static final String TAG = "MainActivity===";
     private SurfaceView surfaceView;
     private SurfaceHolder surfaceHolder;
+    public long videoDuration;
 
     static {
         System.loadLibrary("native-lib");
@@ -59,7 +60,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                     Log.d(TAG,"file exit");
                 }
                 try {
-                    setSurface(surfaceHolder.getSurface(), "/storage/extsd/video/A/20180101221156A11111.mp4");
+                    setSurface(surfaceHolder.getSurface(), "/storage/extsd/video/A/20180101000042A.mp4");
                 }catch (Exception e){
                     e.printStackTrace();
                 }
@@ -85,11 +86,18 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
 
     @Override
     public void error(String error) {
-       Log.d(TAG,"22212121221");
+       Log.d(TAG,"error=="+error);
     }
 
     @Override
-    public void success() {
+    public void success(String msg) {
 
     }
+
+    //获取视频文件长度
+    public void setVideoDuration(long duration){
+        Log.d(TAG,"duration==="+duration);
+        videoDuration = duration;
+    }
+
 }
