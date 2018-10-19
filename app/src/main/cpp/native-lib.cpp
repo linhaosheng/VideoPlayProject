@@ -1,6 +1,6 @@
 #include <jni.h>
 #include <string>
-#include <android/log.h>
+#include "local/androidLog.h"
 #include <android/native_window.h>
 #include <android/native_window_jni.h>
 #include "local/native-lib.h"
@@ -14,8 +14,6 @@ extern "C" {
 #include "libavutil/imgutils.h"
 };
 
-#define  LOG_TAG    "videoplayer"
-#define  LOGD(...)  __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 
 void error(JNIEnv *env,char errrorMsg[50]);
 void success(JNIEnv *env,char errrorMsg[50]);
@@ -82,6 +80,7 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
             videoStreamIndex = i;
             break;
         }
+
     }
 
     if (videoStreamIndex == -1) {
@@ -181,6 +180,10 @@ Java_com_linhao_video_MainActivity_setSurface(JNIEnv *env, jobject instance, job
         if (packet.stream_index == videoStreamIndex) {
             //开始解压视频流
             avcodec_decode_video2(pCodecCtx, frame, &frameFinish, &packet);
+
+
+            LOGD("duration===%i",frame->pts * av_q2d(pFormatCtx->streams[videoStreamIndex]->time_base));
+            //setCurrentProgress(env,frame->pts);
             //并不是一次就可以解码出一帧得
             if (frameFinish) {
                 ANativeWindow_lock(aNativeWindow, &window_buffer, 0);

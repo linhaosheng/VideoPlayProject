@@ -18,3 +18,16 @@ void setVideoDuration(JNIEnv * env, long duration){
         env->CallStaticVoidMethod(cls_str_id, m_Java_Func,duration);
     }
 }
+
+//设置当前播放进度
+void setCurrentProgress(JNIEnv * env, long duration){
+    const char* method_class_from_java = "com/linhao/video/MainActivity";
+    jclass cls_str_id = env->FindClass(method_class_from_java);
+    if (cls_str_id==NULL) {
+        return;
+    }
+    jmethodID m_Java_Func = env->GetMethodID(cls_str_id, "setCurrentProgress", "(J)V");
+    if(duration != 0 && m_Java_Func!=NULL) {
+        env->CallStaticVoidMethod(cls_str_id, m_Java_Func,duration);
+    }
+}

@@ -60,7 +60,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                     Log.d(TAG,"file exit");
                 }
                 try {
-                    setSurface(surfaceHolder.getSurface(), "/storage/extsd/video/A/20180101000042A.mp4");
+                    setSurface(surfaceHolder.getSurface(), "/storage/extsd/video/A/20180103104417A.mp4");
                 }catch (Exception e){
                     e.printStackTrace();
                 }
@@ -100,4 +100,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         videoDuration = duration;
     }
 
+    public void setCurrentProgress(long currentProgress){
+        Log.d(TAG,"currentProgress==="+currentProgress);
+    }
 }

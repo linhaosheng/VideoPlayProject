@@ -37,10 +37,8 @@ set_target_properties(swscale-4_lib PROPERTIES IMPORTED_LOCATION
 
 add_library( # Sets the name of the library.
              native-lib
-
              # Sets the library as a shared library.
              SHARED
-
              # Provides a relative path to your source file(s).
              src/main/cpp/native-lib.cpp )
 
@@ -50,9 +48,24 @@ add_library( # Sets the name of the library.
         src/main/cpp/callJavaUtil.cpp )
 
 add_library( # Sets the name of the library.
+        pack_queue_lib
+        SHARED
+        src/main/cpp/PacketQueue.cpp )
+
+add_library( # Sets the name of the library.
         videoInfo_lib
         SHARED
         src/main/cpp/videoInfo.cpp )
+
+add_library( # Sets the name of the library.
+        rawVideoDataUnit_lib
+        SHARED
+        src/main/cpp/RawVideoDataUnit.cpp )
+
+add_library( # Sets the name of the library.
+        rawVideoDataQueue_lib
+        SHARED
+        src/main/cpp/RawVideoDataQueue.cpp )
 
 
 # Searches for a specified prebuilt library and stores the path as a
@@ -76,6 +89,9 @@ target_link_libraries( # Specifies the target library.
                        native-lib
                        util-lib
                        videoInfo_lib
+                       pack_queue_lib
+                       rawVideoDataUnit_lib
+                       rawVideoDataQueue_lib
                        android
                        # Links the target library to the log library
                        # included in the NDK.
