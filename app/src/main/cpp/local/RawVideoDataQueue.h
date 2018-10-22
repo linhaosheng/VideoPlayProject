@@ -17,7 +17,7 @@ public:
 
     bool putData(unsigned int timeStamp, unsigned char * data,unsigned int dataLength,unsigned int width,unsigned int height);
 
-    bool getData(unsigned int &timeStamp, unsigned char * data, unsigned int & dataLength, unsigned int & width,unsigned int &heigjt);
+    bool getData(unsigned int &timeStamp, unsigned char * data, unsigned int & dataLength, unsigned int & width,unsigned int &height);
 
     void setSizeLimit(unsigned size);
 
